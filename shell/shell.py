@@ -20,6 +20,7 @@ while 1:
     sys.exit(0)
   elif args[0] == 'cd':
     os.chdir(args[1])
+    continue
 
   rc = os.fork()
 
