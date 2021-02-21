@@ -15,6 +15,20 @@ def read_file(file):
   with open(file, 'r') as file:
     return file.read()
 
+def execute_args(args):
+  for dir in re.split(":", os.environ['PATH']):
+    program = "%s/%s" % (dir, args[0])
+    # os.write(1, 'Trying to execute...\n'.encode())
+    try:
+      os.execve(program, args, os.environ)
+    except FileNotFoundError:
+      pass
+    except Exception as e:
+      os.write(1, 'Program terminated with exit code %s'%str(e))
+      
+  os.write(2, ('%s: command not found\n'%args[0]).encode())
+  sys.exit(1)
+
 while 1:
   os.write(1, check_ps1().encode())
   input = os.read(0, 1000)
@@ -46,23 +60,13 @@ while 1:
       os.set_inheritable(1, True)
       args = args[:args.index('>')]
     elif '<' in args:
-      data = read_file(args[args.index('<')+1])
+      os.close(0)
+      os.open(args[(args.index('<')+1)], os.O_RDONLY)
+      os.set_inheritable(0, True)
       del args[args.index('<')+1]
-      args[args.index('<')] = data
-      print(args)
+      del args[args.index('<')]
       
-    for dir in re.split(":", os.environ['PATH']):
-      program = "%s/%s" % (dir, args[0])
-      # os.write(1, 'Trying to execute...\n'.encode())
-      try:
-        os.execve(program, args, os.environ)
-      except FileNotFoundError:
-        pass
-      except Exception as e:
-        os.write(1, 'Program terminated with exit code %s'%str(e))
-      
-    os.write(2, ('%s: command not found\n'%args[0]).encode())
-    sys.exit(1)
+    execute_args(args)
   elif amper:
     pass
   else:
