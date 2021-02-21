@@ -3,7 +3,7 @@
 import os, sys, re
 
 def check_ps1():
-  if len(os.environ['PS1']) < 20 and len(os.environ['PATH'] > 0):
+  if len(os.environ['PS1']) < 20 and len(os.environ['PATH'] >= 0):
     return os.environ['PS1']
   return '$ '
 
@@ -14,10 +14,12 @@ def my_readline(fd):
 while 1:
   os.write(1, check_ps1().encode())
   input = os.read(0, 1000)
-
-  if input.decode('utf-8')[0:4] == 'exit':
+  args = re.split(' ', input.decode('utf-8')[0:-1])
+  if args[0] == 'exit':
     os.write(1, 'Goodbye!\n'.encode())
     sys.exit(0)
+  elif args[0] == 'cd':
+    os.chdir(args[1])
 
   rc = os.fork()
 
@@ -28,7 +30,6 @@ while 1:
     # Do the prcess of the passed input parameters
     # os.write(1, 'Child!\n'.encode())
     
-    args = re.split(' ', input.decode('utf-8')[0:-1])
     if '>' in args:
       os.close(1)
       os.open(args[(args.index('>')+1)], os.O_CREAT | os.O_WRONLY)
