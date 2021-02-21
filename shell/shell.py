@@ -24,7 +24,7 @@ def execute_args(args):
     except FileNotFoundError:
       pass
     except Exception as e:
-      os.write(1, 'Program terminated with exit code %s'%str(e))
+      os.write(2, ('Program terminated with exit code %s\n'%str(e)).encode())
       
   os.write(2, ('%s: command not found\n'%args[0]).encode())
   sys.exit(1)
@@ -33,6 +33,7 @@ while 1:
   os.write(1, check_ps1().encode())
   input = os.read(0, 1000)
   amper = False
+  pipe = False
   args = re.split(' ', input.decode('utf-8')[0:-1])
   if args[0] == 'exit':
     os.write(1, 'Goodbye!\n'.encode())
@@ -43,32 +44,51 @@ while 1:
   elif args[-1] == '&':
     args = args[:-1]
     amper = True
+  elif '|' in args:
+    pr, pw = os.pipe()
+    for fd in (pr, pw):
+      os.set_inheritable(fd, True)
 
   rc = os.fork()
   
-
   if rc < 0:
     os.write(2, 'Fork failed!\n'.encode())
     sys.exit(0)
   elif rc == 0:
     # Do the prcess of the passed input parameters
     # os.write(1, 'Child!\n'.encode())
-    
-    if '>' in args:
+    if '|' in args:
+      os.close(1)
+      dup = os.dup(pw)
+      for fd in (pr, pw):
+        os.close(fd)
+      #os.set_inheritable(dup, True)
+      args = args[:args.index('|')]
+    elif '>' in args:
       os.close(1)
       os.open(args[(args.index('>')+1)], os.O_CREAT | os.O_WRONLY)
       os.set_inheritable(1, True)
-      args = args[:args.index('>')]
+      del args[args.index('>')+1]
+      del args[args.index('>')]
     elif '<' in args:
       os.close(0)
       os.open(args[(args.index('<')+1)], os.O_RDONLY)
       os.set_inheritable(0, True)
       del args[args.index('<')+1]
       del args[args.index('<')]
+    elif '|' in args:
+      pr, pw = os.pipe()
       
     execute_args(args)
   elif amper:
     pass
+  elif '|' in args:
+    os.wait()
+    os.close(0)
+    dup = os.dup(pr)
+    for fd in (pr, pw):
+      os.close(fd)
+    #os.set_inheritable(dup, True)
   else:
    os.wait()
     # os.write(1, 'Parent!\n'.encode())
