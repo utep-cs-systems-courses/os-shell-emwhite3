@@ -11,9 +11,14 @@ def my_readline(fd):
   while True:
     return
 
+def read_file(file):
+  with open(file, 'r') as file:
+    return file.read()
+
 while 1:
   os.write(1, check_ps1().encode())
   input = os.read(0, 1000)
+  amper = False
   args = re.split(' ', input.decode('utf-8')[0:-1])
   if args[0] == 'exit':
     os.write(1, 'Goodbye!\n'.encode())
@@ -21,8 +26,12 @@ while 1:
   elif args[0] == 'cd':
     os.chdir(args[1])
     continue
+  elif args[-1] == '&':
+    args = args[:-1]
+    amper = True
 
   rc = os.fork()
+  
 
   if rc < 0:
     os.write(2, 'Fork failed!\n'.encode())
@@ -36,7 +45,12 @@ while 1:
       os.open(args[(args.index('>')+1)], os.O_CREAT | os.O_WRONLY)
       os.set_inheritable(1, True)
       args = args[:args.index('>')]
-
+    elif '<' in args:
+      data = read_file(args[args.index('<')+1])
+      del args[args.index('<')+1]
+      args[args.index('<')] = data
+      print(args)
+      
     for dir in re.split(":", os.environ['PATH']):
       program = "%s/%s" % (dir, args[0])
       # os.write(1, 'Trying to execute...\n'.encode())
@@ -44,12 +58,14 @@ while 1:
         os.execve(program, args, os.environ)
       except FileNotFoundError:
         pass
+      except Exception as e:
+        os.write(1, 'Program terminated with exit code %s'%str(e))
       
-    os.write(2, ('Could not find \'%s\' program to execute\n'%args[0]).encode())
+    os.write(2, ('%s: command not found\n'%args[0]).encode())
     sys.exit(1)
-
-
+  elif amper:
+    pass
   else:
-    os.wait()
+   os.wait()
     # os.write(1, 'Parent!\n'.encode())
   # os.write(1, input)
