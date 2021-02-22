@@ -94,7 +94,7 @@ while 1:
 
   elif amper:			# parent checks
     pass			# if we want a background process do not wait for child to finish
-  elif not pipe and '|' in args:# if we are a wrute process set args for next child process
+  elif '|' in args:		# if we are a write process set args for next child process
     os.wait()
     args = args[(args.index('|')+1):]
     pipe = True
@@ -103,7 +103,7 @@ while 1:
     print(os.read(pr, 10000).decode())
     for fd in (pw, pr):
       os.close(fd)
-    #os.fdopen(0)
+  
   else:				# wait for child process to finish
    os.wait()
     # os.write(1, 'Parent!\n'.encode())
