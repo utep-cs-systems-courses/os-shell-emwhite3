@@ -3,7 +3,7 @@
 import os, sys, re
 
 def check_ps1():
-  if len(os.environ['PS1']) < 20 and len(os.environ['PATH'] >= 0):
+  if len(os.environ['PS1']) < 20 and len(os.environ['PS1'] >= 0):
     return os.environ['PS1']
   return '$ '
 
@@ -25,6 +25,7 @@ def execute_args(args):
       pass
     except Exception as e:
       os.write(2, ('Program terminated with exit code %s\n'%str(e)).encode())
+      sys.exit(1)
       
   os.write(2, ('%s: command not found\n'%args[0]).encode())
   sys.exit(1)
@@ -55,14 +56,12 @@ while 1:
     os.write(2, 'Fork failed!\n'.encode())
     sys.exit(0)
   elif rc == 0:
-    # Do the prcess of the passed input parameters
-    # os.write(1, 'Child!\n'.encode())
     if '|' in args:
       os.close(1)
       dup = os.dup(pw)
       for fd in (pr, pw):
         os.close(fd)
-      #os.set_inheritable(dup, True)
+      os.set_inheritable(dup, True)
       args = args[:args.index('|')]
     elif '>' in args:
       os.close(1)
@@ -88,7 +87,7 @@ while 1:
     dup = os.dup(pr)
     for fd in (pr, pw):
       os.close(fd)
-    #os.set_inheritable(dup, True)
+    os.set_inheritable(dup, True)
   else:
    os.wait()
     # os.write(1, 'Parent!\n'.encode())
