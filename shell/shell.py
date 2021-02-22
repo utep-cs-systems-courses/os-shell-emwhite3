@@ -89,8 +89,6 @@ while 1:
       os.set_inheritable(0, True)
       del args[args.index('<')+1]
       del args[args.index('<')]
-    elif '|' in args:
-      pr, pw = os.pipe()
       
     execute_args(args)		# execute the child process
 
