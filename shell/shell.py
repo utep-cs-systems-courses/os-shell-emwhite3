@@ -1,15 +1,16 @@
 #! /usr/bin/env python3
 
-import os, sys, re
+import os, sys, re, fileinput
 
 def check_ps1():
   if len(os.environ['PS1']) < 20 and len(os.environ['PS1'] >= 0):
     return os.environ['PS1']
   return '$ '
 
-def my_readline(fd):
-  while True:
-    return
+def read_input():
+  os.write(1, check_ps1().encode())
+  input = os.read(0, 1000)
+  return re.split(' ', input.decode('utf-8')[0:-1])
 
 def read_file(file):
   with open(file, 'r') as file:
@@ -30,12 +31,13 @@ def execute_args(args):
   os.write(2, ('%s: command not found\n'%args[0]).encode())
   sys.exit(1)
 
+args = []
+pipe = False
 while 1:
-  os.write(1, check_ps1().encode())
-  input = os.read(0, 1000)
   amper = False
-  pipe = False
-  args = re.split(' ', input.decode('utf-8')[0:-1])
+  print(args)
+  if not pipe:
+    args = read_input()
   if args[0] == 'exit':
     os.write(1, 'Goodbye!\n'.encode())
     sys.exit(0)
@@ -45,7 +47,7 @@ while 1:
   elif args[-1] == '&':
     args = args[:-1]
     amper = True
-  elif '|' in args:
+  elif '|' in args and not pipe:
     pr, pw = os.pipe()
     for fd in (pr, pw):
       os.set_inheritable(fd, True)
@@ -63,6 +65,12 @@ while 1:
         os.close(fd)
       os.set_inheritable(dup, True)
       args = args[:args.index('|')]
+    if pipe:
+      os.close(0)
+      dup = os.dup(pr)
+      for fd in (pr, pw):
+        os.close(fd)
+      os.set_inheritable(dup, True)
     elif '>' in args:
       os.close(1)
       os.open(args[(args.index('>')+1)], os.O_CREAT | os.O_WRONLY)
@@ -79,15 +87,19 @@ while 1:
       pr, pw = os.pipe()
       
     execute_args(args)
+
   elif amper:
     pass
-  elif '|' in args:
+  elif not pipe and '|' in args:
     os.wait()
-    os.close(0)
-    dup = os.dup(pr)
-    for fd in (pr, pw):
+    args = args[(args.index('|')+1):]
+    pipe = True
+  elif pipe and not ('|' in args):
+    pipe = False
+    print(os.read(pr, 10000).decode())
+    for fd in (pw, pr):
       os.close(fd)
-    os.set_inheritable(dup, True)
+    #os.fdopen(0)
   else:
    os.wait()
     # os.write(1, 'Parent!\n'.encode())
