@@ -15,7 +15,7 @@ def my_read_line():
   os.write(1, check_ps1().encode())
   input = os.read(0, 1000)
   if input == '\n'.encode():
-    read_input()
+    my_read_line()
   return re.split(' ', input.decode('utf-8')[0:-1])
 
 
